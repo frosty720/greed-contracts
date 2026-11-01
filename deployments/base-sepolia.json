@@ -1,0 +1,33 @@
+{
+	"chainId": 84532,
+	"block": 50741700,
+	"weth": "0x4200000000000000000000000000000000000006",
+	"greed": "0x1E5eb0279824f2BCaa5327c2cAf5BeE3AE1A1543",
+	"pool": "0xA8302D5284D03db0674f6321e1100f8e52Ccd5a3",
+	"poolFee": 10000,
+	"positionTokenId": "83425",
+	"buyer": "0x1B8f370ef826c3f9710ff4C5F52c9716eE08d884",
+	"prizePool": "0x20ad5305A54d0a57cACF982B9B5776bfA328c637",
+	"treasury": "0x3765Db2f21382240A8eF5f5E5690A6958f473D27",
+	"claimWindow": 2419200,
+	"stocks": [
+		{
+			"address": "0x0deB38971fE327319eC952417211f15d00a8e272",
+			"name": "Mock Stock Alpha",
+			"symbol": "MSKA",
+			"decimals": 8
+		},
+		{
+			"address": "0x2447872b8b38Bb3BaCe8CD349FB743c7706c5b6c",
+			"name": "Mock Stock Beta",
+			"symbol": "MSKB",
+			"decimals": 8
+		},
+		{
+			"address": "0x123bDDDD90206976B668854a48430d1B09b57D44",
+			"name": "Mock Stock Gamma",
+			"symbol": "MSKC",
+			"decimals": 8
+		}
+	]
+}
