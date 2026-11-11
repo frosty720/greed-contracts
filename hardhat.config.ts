@@ -6,6 +6,9 @@ const secret = process.env.THIRDWEB_SECRET_KEY ?? '';
 const baseUrl = process.env.BASE_RPC_URL ?? '';
 const sepoliaUrl = process.env.BASE_SEPOLIA_RPC_URL ?? '';
 const deployer = process.env.DEPLOYER_PRIVATE_KEY;
+// Its own variable: the keys in DEPLOYER_PRIVATE_KEY and friends are testnet keys, so nothing can send on Base until this is set.
+const baseDeployer = process.env.BASE_DEPLOYER_PRIVATE_KEY;
+const forkUrl = process.env.FORK_CHAIN_ID === '84532' ? sepoliaUrl : baseUrl;
 
 /**
  * The thirdweb secret goes only to thirdweb's RPC hosts, and only with a client-ID URL (https://<chain>.rpc.thirdweb.com/<clientId>).
@@ -33,7 +36,7 @@ const config: HardhatUserConfig = {
 			chainId: Number(process.env.FORK_CHAIN_ID ?? 31337),
 			chains: { 8453: { hardforkHistory: { cancun: 0 } }, 84532: { hardforkHistory: { cancun: 0 } } },
 			...(process.env.FORK === '1'
-				? { forking: { url: baseUrl, blockNumber: Number(process.env.FORK_BLOCK ?? 53139000), httpHeaders: headersFor(baseUrl) } }
+				? { forking: { url: forkUrl, blockNumber: Number(process.env.FORK_BLOCK ?? 53139000), httpHeaders: headersFor(forkUrl) } }
 				: {}),
 		},
 		baseSepolia: {
@@ -42,6 +45,7 @@ const config: HardhatUserConfig = {
 			accounts: deployer ? [deployer] : [],
 			httpHeaders: headersFor(sepoliaUrl),
 		},
+		...(baseUrl ? { base: { url: baseUrl, chainId: 8453, accounts: baseDeployer ? [baseDeployer] : [], httpHeaders: headersFor(baseUrl) } } : {}),
 	},
 };
 

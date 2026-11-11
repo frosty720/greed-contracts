@@ -6,7 +6,7 @@
 	"pool": "0xA8302D5284D03db0674f6321e1100f8e52Ccd5a3",
 	"poolFee": 10000,
 	"positionTokenId": "83425",
-	"buyer": "0x1B8f370ef826c3f9710ff4C5F52c9716eE08d884",
+	"buyer": "0x571517aaf6eEEdF2E6aE3fA1669Fe7471285e3d8",
 	"prizePool": "0x20ad5305A54d0a57cACF982B9B5776bfA328c637",
 	"treasury": "0x3765Db2f21382240A8eF5f5E5690A6958f473D27",
 	"claimWindow": 2419200,
@@ -29,5 +29,16 @@
 			"symbol": "MSKC",
 			"decimals": 8
 		}
-	]
+	],
+	"tokenPay": {
+		"usdc": "0x64648855f847021534d47Be7D44c6e96F8636Add",
+		"tokenPay": "0xB4d7cE046A1580B53B2113bF0692eEba0a2d066b"
+	},
+	"route": {
+		"stock": "0x0deB38971fE327319eC952417211f15d00a8e272",
+		"wethUsdcPool": "0x7986ED1915BcE8Dbd45F3e04b313BC658de61e8D",
+		"usdcStockPool": "0x3400736f05579A82ca89676d2239e3704eB972Ec",
+		"stockGreedPool": "0xc71c04d9983F7B43fa4ccEb4879194A04129ccb3"
+	},
+	"costs": "0x3765Db2f21382240A8eF5f5E5690A6958f473D27"
 }
