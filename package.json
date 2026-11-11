@@ -4,7 +4,8 @@
 	"scripts": {
 		"test": "hardhat test",
 		"coverage": "hardhat coverage",
-		"test:fork": "FORK=1 hardhat test test/GreedBuyer.fork.test.ts"
+		"test:fork": "FORK=1 FORK_CHAIN_ID=8453 hardhat test test/GreedBuyer.fork.test.ts",
+		"test:fork:sepolia": "FORK=1 FORK_CHAIN_ID=84532 FORK_BLOCK=54955000 hardhat test test/TokenPay.sepolia-fork.test.ts"
 	},
 	"keywords": [],
 	"author": "",

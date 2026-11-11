@@ -80,9 +80,7 @@ async function main(): Promise<void> {
 	// The pool's active liquidity reads 0 until the first buy: a single-sided position sits just past the price.
 	console.log(`position #${positionTokenId}, liquidity ${increased.args.liquidity}, pool holds ${ethers.formatEther(await greed.balanceOf(poolAddr))} tGREED`);
 
-	const buyer = await (await ethers.deployContract('GreedBuyer', [SEPOLIA.weth, greedAddr, poolAddr, treasury])).waitForDeployment();
 	const prizePool = await (await ethers.deployContract('PrizePool', [treasury, CLAIM_WINDOW])).waitForDeployment();
-	console.log(`GreedBuyer ${await buyer.getAddress()}`);
 	console.log(`PrizePool ${await prizePool.getAddress()}`);
 
 	saveDeployment(network.name, {
@@ -93,7 +91,7 @@ async function main(): Promise<void> {
 		pool: poolAddr,
 		poolFee: SEPOLIA.poolFee,
 		positionTokenId,
-		buyer: await buyer.getAddress(),
+		buyer: ethers.ZeroAddress, // GreedBuyer needs the route, so deploy-token-pay.ts deploys it
 		prizePool: await prizePool.getAddress(),
 		treasury,
 		claimWindow: CLAIM_WINDOW,

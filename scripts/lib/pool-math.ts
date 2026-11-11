@@ -20,3 +20,15 @@ export function singleSidedRange(currentTick: number, greedIsToken0: boolean, ti
 	const below = Math.floor(currentTick / tickSpacing) * tickSpacing;
 	return greedIsToken0 ? { tickLower: below + tickSpacing, tickUpper: maxUsable } : { tickLower: -maxUsable, tickUpper: below };
 }
+
+/** The token1-per-token0 price, in raw units, of a pool selling one token for another, from what one whole token sold costs in whole tokens paid. */
+export function oneWayPoolPrice(priceOfOutInIn: number, decimalsOut: number, decimalsIn: number, outIsToken0: boolean): number {
+	const rawInPerRawOut = priceOfOutInIn * 10 ** (decimalsIn - decimalsOut);
+	return outIsToken0 ? rawInPerRawOut : 1 / rawInPerRawOut;
+}
+
+/** One GREED in dollars, from a GREED/WETH pool's sqrtPriceX96 (both tokens have 18 decimals). */
+export function usdPerGreedFromEthPool(sqrtPriceX96: bigint, greedIsToken0: boolean, ethUsd: number): number {
+	const token1PerToken0 = (Number(sqrtPriceX96) / 2 ** 96) ** 2;
+	return (greedIsToken0 ? token1PerToken0 : 1 / token1PerToken0) * ethUsd;
+}
