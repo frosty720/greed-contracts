@@ -1,5 +1,5 @@
 import { Signer, getAddress, isAddress, Interface, Contract, Provider, ZeroAddress, toBeHex } from 'ethers';
-import { ethers } from 'hardhat';
+import { artifacts, ethers } from 'hardhat';
 import { BASE, withoutUrls } from './mainnet';
 import { SPLIT } from './token-pay';
 
@@ -103,7 +103,10 @@ export interface SimulatedSize {
 	/** What a game payment of this size buys for the treasury, and what a Shop buy gets: the contracts' own quotes. */
 	quotePay: bigint;
 	quoteBuy: bigint;
-	/** ETH only: what `pay` and `buy` return when run in full, tokens moving, on live state. Null for USDC, which needs an allowance. */
+	/**
+	 * What `pay` and `buy` return when run in full, tokens moving, on live state. For USDC, `pay` runs only when a holder is
+	 * named (it needs USDC and an allowance) and `buy` is never run.
+	 */
 	pay: bigint | null;
 	buy: bigint | null;
 }
@@ -116,13 +119,16 @@ const PAY_ABI = new Interface([
 	'function pay(bytes32, uint256) payable returns (uint256)',
 	'function buy(address, uint256) payable returns (uint256)',
 ]);
+const SIM_PAYER_ABI = new Interface(['function payUsdc(address usdc, address tokenPay, uint256 amount) returns (uint256)']);
 
 /**
  * Runs a payment contract against the chain's current state without deploying or sending anything: the node runs the
  * constructor for the route, then each call against that code at a scratch address. This is the only way to exercise a
  * B20 stock, and it fails exactly where a real payment would (a pool that isn't one, a token that won't transfer).
+ * `usdcHolder` is any address that holds at least the largest size in USDC and is not on the route: for the length of
+ * one call it runs SimPayer's code, so a USDC payment is made in full from its balance.
  */
-export async function simulateRoute(provider: Rpc, contract: 'GreedBuyer' | 'TokenPay', route: Route, sizes: bigint[]): Promise<SimulatedSize[]> {
+export async function simulateRoute(provider: Rpc, contract: 'GreedBuyer' | 'TokenPay', route: Route, sizes: bigint[], usdcHolder?: string): Promise<SimulatedSize[]> {
 	const factory = await ethers.getContractFactory(contract);
 	const creation = (await factory.getDeployTransaction(route)).data;
 	const step = async <T>(what: string, run: () => Promise<T>): Promise<T> => {
@@ -139,6 +145,13 @@ export async function simulateRoute(provider: Rpc, contract: 'GreedBuyer' | 'Tok
 		const result = await step(`${fn} of ${value > 0n ? value : args[0]}`, () => provider.send('eth_call', [tx, 'latest', overrides]) as Promise<string>);
 		return PAY_ABI.decodeFunctionResult(fn, result)[0] as bigint;
 	};
+	const payUsdc = async (holder: string, amountIn: bigint): Promise<bigint> => {
+		const payerCode = (await artifacts.readArtifact('SimPayer')).deployedBytecode;
+		const tx = { from: SIM_PAYER, to: holder, data: SIM_PAYER_ABI.encodeFunctionData('payUsdc', [route.payToken, SIM_AT, amountIn]) };
+		const overrides = { [SIM_AT]: { code }, [holder]: { code: payerCode }, [SIM_PAYER]: { balance: toBeHex(10n ** 18n) } };
+		const result = await step(`payUsdc of ${amountIn}`, () => provider.send('eth_call', [tx, 'latest', overrides]) as Promise<string>);
+		return SIM_PAYER_ABI.decodeFunctionResult('payUsdc', result)[0] as bigint;
+	};
 	const out: SimulatedSize[] = [];
 	for (const amountIn of sizes) {
 		const quotePay = await call('quotePay', [amountIn]);
@@ -148,7 +161,7 @@ export async function simulateRoute(provider: Rpc, contract: 'GreedBuyer' | 'Tok
 			amountIn,
 			quotePay,
 			quoteBuy,
-			pay: eth ? await call('pay', [ethers.id('simulated'), 0n], amountIn) : null,
+			pay: eth ? await call('pay', [ethers.id('simulated'), 0n], amountIn) : usdcHolder ? await payUsdc(usdcHolder, amountIn) : null,
 			buy: eth ? await call('buy', [route.treasury, 0n], amountIn) : null,
 		});
 	}

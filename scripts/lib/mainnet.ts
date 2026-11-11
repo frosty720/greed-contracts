@@ -34,18 +34,21 @@ export function withoutUrls(message: string): string {
 	return message.replace(/https?:\/\/\S+/g, '<rpc-url>');
 }
 
-/** The prize pool's owner posts and funds every round, so it has to be the multisig and not a single key. */
+/** The prize pool's owner posts and funds every round, so it has to be a multisig that takes at least two signatures. */
 export async function requireSafe(provider: Provider, address: string): Promise<{ threshold: bigint; owners: string[] }> {
 	if (!isAddress(address)) throw new Error(`${address} is not an address`);
 	if ((await provider.getCode(address)) === '0x') throw new Error(`${address} has no contract on this chain, so it can't be the treasury Safe`);
 	const safe = new Contract(address, SAFE_ABI, provider);
+	let threshold: bigint;
+	let owners: string[];
 	try {
-		const threshold = (await safe.getThreshold()) as bigint;
-		const owners = (await safe.getOwners()) as string[];
-		return { threshold, owners: [...owners] };
+		threshold = (await safe.getThreshold()) as bigint;
+		owners = [...((await safe.getOwners()) as string[])];
 	} catch (error) {
 		throw new Error(`${address} is not a Safe, or the RPC failed: ${withoutUrls((error as Error).message)}`);
 	}
+	if (threshold < 2n) throw new Error(`${address} needs only ${threshold} signature: the treasury must take at least 2, or one key controls every prize`);
+	return { threshold, owners };
 }
 
 /**

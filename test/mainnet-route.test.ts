@@ -110,6 +110,29 @@ describe('GREED payment route on Base', () => {
 			expect(await greed.balanceOf(treasury.address)).to.equal(0n);
 		});
 
+		it('runs a USDC payment in full from a holder of USDC, and it matches the quote and moves nothing for real', async () => {
+			const { routes, treasury, costs, usdc, stock, greed } = await world();
+			const holder = '0x0000000000000000000000000000000000b01de2';
+			await usdc.mint(holder, 2n * ONE_USDC);
+			const [two] = await simulateRoute(ethers.provider, 'TokenPay', routes.tokenPay, [2n * ONE_USDC], holder);
+			expect(two.pay).to.equal(200_000n * ONE_GREED);
+			expect(two.pay).to.equal(two.quotePay);
+			expect(two.buy).to.equal(null);
+			// Only simulated: the holder still has its USDC and no code, and nobody was paid.
+			expect(await usdc.balanceOf(holder)).to.equal(2n * ONE_USDC);
+			expect(await ethers.provider.getCode(holder)).to.equal('0x');
+			expect(await usdc.balanceOf(costs.address)).to.equal(0n);
+			expect(await stock.balanceOf(treasury.address)).to.equal(0n);
+			expect(await greed.balanceOf(treasury.address)).to.equal(0n);
+		});
+
+		it('a USDC payment that could not be made fails the simulation, naming the step', async () => {
+			const { routes } = await world();
+			// This holder has no USDC, as a costs wallet that could not be paid would also revert the whole payment.
+			const empty = '0x0000000000000000000000000000000000e3b7e1';
+			expect(await rejection(simulateRoute(ethers.provider, 'TokenPay', routes.tokenPay, [2n * ONE_USDC], empty))).to.contain('TokenPay: payUsdc of 2000000 failed');
+		});
+
 		it('runs an ETH payment and buy in full, tokens moving, and they match the quotes and the deployed contract', async () => {
 			const { routes, treasury, greed, weth, costs } = await world();
 			const [two] = await simulateRoute(ethers.provider, 'GreedBuyer', routes.buyer, [TWO_DOLLARS_ETH]);

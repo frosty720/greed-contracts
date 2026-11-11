@@ -1,6 +1,6 @@
 import { ethers, network } from 'hardhat';
 import { requireBase, requireSafe, withoutUrls } from './lib/mainnet';
-import { deployPayContracts, payRoutes, requireBought, requireGreedPool, simulateRoute } from './lib/mainnet-route';
+import { BASE_ROUTE, deployPayContracts, payRoutes, requireBought, requireGreedPool, simulateRoute } from './lib/mainnet-route';
 import { deploymentExists, deploymentFile, loadDeployment, saveDeployment } from './lib/sepolia';
 
 /**
@@ -32,7 +32,8 @@ async function main(): Promise<void> {
 	const routes = payRoutes({ greed, greedPool, treasury: safe, costs });
 
 	// The same contracts, run by the live node against the real pools, before anything permanent is sent.
-	requireBought('TokenPay', await simulateRoute(ethers.provider, 'TokenPay', routes.tokenPay, [1_000_000n, 5_000_000n]));
+	// The WETH/USDC pool holds USDC and is not on the USDC route, so it stands in as the payer of a whole USDC payment.
+	requireBought('TokenPay', await simulateRoute(ethers.provider, 'TokenPay', routes.tokenPay, [1_000_000n, 5_000_000n], BASE_ROUTE.wethUsdcPool));
 	requireBought('GreedBuyer', await simulateRoute(ethers.provider, 'GreedBuyer', routes.buyer, [5n * 10n ** 14n, 2n * 10n ** 15n]));
 	console.log('simulated both contracts on live state: payments in USDC and ETH buy GREED and pay the Safe and the costs wallet');
 

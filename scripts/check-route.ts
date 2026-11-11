@@ -43,7 +43,7 @@ async function main(): Promise<void> {
 	const routes = payRoutes({ greed, greedPool, treasury, costs });
 	const decimals = Number(await new ethers.Contract(greed, ['function decimals() view returns (uint8)'], ethers.provider).decimals());
 
-	const usdc = await simulateRoute(ethers.provider, 'TokenPay', routes.tokenPay, USDC_SIZES);
+	const usdc = await simulateRoute(ethers.provider, 'TokenPay', routes.tokenPay, USDC_SIZES, BASE_ROUTE.wethUsdcPool);
 	requireBought('TokenPay', usdc);
 	table(`USDC -> GOOGLc (${BASE_ROUTE.googlUsdcPool}) -> GREED`, 6, usdc, decimals);
 	const eth = await simulateRoute(ethers.provider, 'GreedBuyer', routes.buyer, ETH_SIZES);

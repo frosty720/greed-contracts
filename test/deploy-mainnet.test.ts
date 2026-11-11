@@ -43,6 +43,12 @@ describe('mainnet deploy checks', () => {
 			expect(await rejection(requireSafe(ethers.provider, await token.getAddress()))).to.contain('not a Safe');
 		});
 
+		it('refuses a Safe that one key alone controls', async () => {
+			const [a, b] = await ethers.getSigners();
+			const safe = await ethers.deployContract('MockSafe', [[a.address, b.address], 1]);
+			expect(await rejection(requireSafe(ethers.provider, await safe.getAddress()))).to.contain('needs only 1 signature');
+		});
+
 		it('reads the owners and threshold of a Safe', async () => {
 			const [a, b, c] = await ethers.getSigners();
 			const safe = await ethers.deployContract('MockSafe', [[a.address, b.address, c.address], 2]);
