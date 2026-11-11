@@ -1,15 +1,17 @@
 import { ethers, network } from 'hardhat';
 import { deployPrizePool, requireBase, requireSafe, withoutUrls } from './lib/mainnet';
-import { CLAIM_WINDOW, deploymentExists, deploymentFile, saveDeployment } from './lib/sepolia';
+import { CLAIM_WINDOW, deploymentExists, deploymentFile, loadDeployment, saveDeployment } from './lib/sepolia';
 
 /**
  * Deploys PrizePool on Base. Without DEPLOY=1 it only runs the checks and says what it would do.
- * GreedBuyer and TokenPay aren't here: they need GREED's pool, and a route through whichever token it is paired with.
+ * GreedBuyer and TokenPay aren't here: they need GREED's pool, so they deploy after its launch with deploy-mainnet-pay.ts.
  */
 async function main(): Promise<void> {
 	const { chainId } = await ethers.provider.getNetwork();
 	requireBase(chainId);
-	if (network.name === 'base' && deploymentExists('base')) throw new Error(`${deploymentFile('base')} exists: a PrizePool deploy was already sent on Base. Check its transaction, and remove the file only if that transaction failed.`);
+	// The payment contracts share this file (deploy-mainnet-pay.ts), so what's already in it is kept, and only a recorded PrizePool stops this.
+	const existing: Record<string, unknown> = deploymentExists(network.name) ? (loadDeployment(network.name) as unknown as Record<string, unknown>) : {};
+	if (network.name === 'base' && (existing.prizePool || existing.status)) throw new Error(`${deploymentFile('base')} already records a PrizePool deploy on Base. Check its transaction, and remove that entry only if the transaction failed.`);
 	const safe = process.env.BASE_TREASURY_SAFE;
 	if (!safe) throw new Error('set BASE_TREASURY_SAFE to the treasury Safe on Base');
 	const { threshold, owners } = await requireSafe(ethers.provider, safe);
@@ -24,10 +26,10 @@ async function main(): Promise<void> {
 	}
 	const deployment = await deployPrizePool(deployer, safe, (sent) => {
 		// Written before waiting: if the connection drops now, this file still stops a second deploy.
-		saveDeployment(network.name, { status: 'sent', ...sent });
+		saveDeployment(network.name, { ...existing, status: 'sent', ...sent });
 		console.log(`sent: transaction ${sent.txHash}, PrizePool ${sent.prizePool}`);
 	});
-	saveDeployment(network.name, deployment);
+	saveDeployment(network.name, { ...existing, ...deployment });
 	console.log(`PrizePool ${deployment.prizePool} in block ${deployment.block}, saved to ${deploymentFile(network.name)}`);
 }
 
