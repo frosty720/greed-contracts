@@ -9,7 +9,6 @@ const USDC_AT = '0x0000000000000000000000000000000000005000';
 const STOCK_AT = '0x0000000000000000000000000000000000006000';
 const USDC_PER_WETH = 2n * 10n ** 9n; // 1 WETH buys $2,000, so 0.001 ETH is $2
 const TWO_DOLLARS_ETH = 10n ** 15n;
-const FACTORY = '0x00000000000000000000000000000000000fac70';
 
 const rejection = async (promise: Promise<unknown>): Promise<string> => {
 	try {
@@ -29,11 +28,14 @@ async function world() {
 	const greed = await ethers.deployContract('MockGreed');
 	const wethUsdc = await fundedPool(weth, usdc, USDC_PER_WETH, minted(usdc));
 	const stockUsdc = await fundedPool(usdc, stock, ONE_TO_ONE, minted(stock));
+	const factory = await ethers.deployContract('MockPoolFactory');
+	const FACTORY = await factory.getAddress();
 	const greedPool = await ethers.deployContract('MockListedPool', [STOCK_AT, await greed.getAddress(), GREED_PER_STOCK, FACTORY, 1_000_000n]);
+	await factory.list(await greedPool.getAddress());
 	await sentGreed(greed)(await greedPool.getAddress());
 	const legs: RouteLegs = { weth: WETH_AT, usdc: USDC_AT, stock: STOCK_AT, wethUsdcPool: await wethUsdc.getAddress(), stockUsdcPool: await stockUsdc.getAddress() };
 	const ends = { greed: await greed.getAddress(), greedPool: await greedPool.getAddress(), treasury: treasury.address, costs: costs.address };
-	return { payer, treasury, costs, weth, usdc, stock, greed, greedPool, legs, ends, routes: payRoutes(ends, legs) };
+	return { payer, treasury, costs, weth, usdc, stock, greed, greedPool, FACTORY, legs, ends, routes: payRoutes(ends, legs) };
 }
 
 describe('GREED payment route on Base', () => {
@@ -65,19 +67,19 @@ describe('GREED payment route on Base', () => {
 		freshChainEachTest();
 
 		it('accepts the launchpad pool of GREED against the stock, and reads its liquidity', async () => {
-			const { ends } = await world();
+			const { ends, FACTORY } = await world();
 			expect(await requireGreedPool(ethers.provider, ends.greedPool, ends.greed, STOCK_AT, FACTORY)).to.deep.equal({ liquidity: 1_000_000n });
 		});
 
 		it('refuses something that is not an address, a plain wallet and a contract that is not a pool', async () => {
-			const { ends, payer, greed } = await world();
+			const { ends, payer, greed, FACTORY } = await world();
 			expect(await rejection(requireGreedPool(ethers.provider, 'nope', ends.greed, STOCK_AT, FACTORY))).to.contain('must be addresses');
 			expect(await rejection(requireGreedPool(ethers.provider, payer.address, ends.greed, STOCK_AT, FACTORY))).to.contain('has no contract');
 			expect(await rejection(requireGreedPool(ethers.provider, await greed.getAddress(), ends.greed, STOCK_AT, FACTORY))).to.contain('not a pool the route can swap on');
 		});
 
 		it('refuses a pool that trades other tokens: GREED against USDC is not GREED against the stock', async () => {
-			const { ends, greed } = await world();
+			const { ends, greed, FACTORY } = await world();
 			const wrong = await ethers.deployContract('MockListedPool', [USDC_AT, await greed.getAddress(), ONE_TO_ONE, FACTORY, 1n]);
 			expect(await rejection(requireGreedPool(ethers.provider, await wrong.getAddress(), ends.greed, STOCK_AT, FACTORY))).to.contain('does not trade GREED');
 			// And the stock paired with itself is no pool of GREED either.
@@ -85,9 +87,15 @@ describe('GREED payment route on Base', () => {
 		});
 
 		it("refuses a look-alike pool from another factory, and one with no liquidity to buy from", async () => {
-			const { ends, greed, greedPool } = await world();
+			const { ends, greed, greedPool, FACTORY } = await world();
 			const other = await ethers.deployContract('MockListedPool', [STOCK_AT, await greed.getAddress(), GREED_PER_STOCK, WETH_AT, 1n]);
 			expect(await rejection(requireGreedPool(ethers.provider, await other.getAddress(), ends.greed, STOCK_AT, FACTORY))).to.contain("not the launchpad's factory");
+			// A look-alike can name the launchpad's factory as its maker; the factory itself doesn't list it.
+			const liar = await ethers.deployContract('MockListedPool', [STOCK_AT, await greed.getAddress(), GREED_PER_STOCK, FACTORY, 1n]);
+			expect(await rejection(requireGreedPool(ethers.provider, await liar.getAddress(), ends.greed, STOCK_AT, FACTORY))).to.contain('does not list');
+			// And a factory address that can't answer is refused, never taken on trust.
+			const noFactory = await ethers.deployContract('MockListedPool', [STOCK_AT, await greed.getAddress(), GREED_PER_STOCK, WETH_AT, 1n]);
+			expect(await rejection(requireGreedPool(ethers.provider, await noFactory.getAddress(), ends.greed, STOCK_AT, WETH_AT))).to.contain('could not be asked');
 			await greedPool.setLiquidity(0);
 			expect(await rejection(requireGreedPool(ethers.provider, ends.greedPool, ends.greed, STOCK_AT, FACTORY))).to.contain('no liquidity');
 		});
@@ -161,7 +169,7 @@ describe('GREED payment route on Base', () => {
 		});
 
 		it('fails where a real payment would: a GREED pool with nothing left to sell', async () => {
-			const { ends, legs, greed } = await world();
+			const { ends, legs, greed, FACTORY } = await world();
 			const empty = await ethers.deployContract('MockListedPool', [STOCK_AT, await greed.getAddress(), GREED_PER_STOCK, FACTORY, 1n]);
 			const routes = payRoutes({ ...ends, greedPool: await empty.getAddress() }, legs);
 			expect(await rejection(simulateRoute(ethers.provider, 'TokenPay', routes.tokenPay, [ONE_USDC]))).to.contain('TokenPay: quotePay of 1000000 failed');

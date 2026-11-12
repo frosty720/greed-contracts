@@ -69,11 +69,14 @@ export function payRoutes(ends: RouteEnds, legs: RouteLegs = BASE_LEGS): PayRout
 	};
 }
 
-const POOL_ABI = ['function token0() view returns (address)', 'function token1() view returns (address)', 'function factory() view returns (address)', 'function liquidity() view returns (uint128)'];
+const POOL_ABI = ['function token0() view returns (address)', 'function token1() view returns (address)', 'function factory() view returns (address)', 'function tickSpacing() view returns (int24)', 'function liquidity() view returns (uint128)'];
+/** The launchpad factory's own record of its pools, read on Base on 2026-11-11: either token order answers. */
+const FACTORY_ABI = ['function getPool(address, address, int24) view returns (address)'];
 
 /**
  * GREED's pool must be the launchpad's pool of GREED against the stock, with liquidity in it. Deploying against any other
- * pool would be permanent: neither contract's route can change.
+ * pool would be permanent: neither contract's route can change. The factory itself must list the pool: a look-alike can
+ * claim any factory, so the pool's own word is not enough.
  */
 export async function requireGreedPool(provider: Provider, pool: string, greed: string, stock: string = BASE_ROUTE.googl, factory: string = BASE_ROUTE.stonksFactory): Promise<{ liquidity: bigint }> {
 	if (!isAddress(pool) || !isAddress(greed)) throw new Error('GREED_ADDRESS and GREED_POOL must be addresses');
@@ -81,10 +84,12 @@ export async function requireGreedPool(provider: Provider, pool: string, greed: 
 	const contract = new Contract(pool, POOL_ABI, provider);
 	let tokens: string[];
 	let madeBy: string;
+	let spacing: bigint;
 	let liquidity: bigint;
 	try {
 		tokens = [(await contract.token0()) as string, (await contract.token1()) as string].map((t) => t.toLowerCase());
 		madeBy = (await contract.factory()) as string;
+		spacing = (await contract.tickSpacing()) as bigint;
 		liquidity = (await contract.liquidity()) as bigint;
 	} catch (error) {
 		throw new Error(`${pool} is not a pool the route can swap on, or the RPC failed: ${withoutUrls((error as Error).message)}`);
@@ -92,6 +97,13 @@ export async function requireGreedPool(provider: Provider, pool: string, greed: 
 	const wanted = [greed.toLowerCase(), stock.toLowerCase()];
 	if (!wanted.every((t) => tokens.includes(t)) || greed.toLowerCase() === stock.toLowerCase()) throw new Error(`${pool} does not trade GREED (${greed}) against the stock (${stock})`);
 	if (madeBy.toLowerCase() !== factory.toLowerCase()) throw new Error(`${pool} was made by ${madeBy}, not the launchpad's factory ${factory}`);
+	let listed: string;
+	try {
+		listed = (await new Contract(factory, FACTORY_ABI, provider).getPool(greed, stock, spacing)) as string;
+	} catch (error) {
+		throw new Error(`the launchpad's factory ${factory} could not be asked about ${pool}: ${withoutUrls((error as Error).message)}`);
+	}
+	if (listed.toLowerCase() !== pool.toLowerCase()) throw new Error(`the launchpad's factory ${factory} does not list ${pool} as its pool of GREED against the stock`);
 	if (liquidity === 0n) throw new Error(`${pool} has no liquidity in range: a payment could not buy GREED on it`);
 	return { liquidity };
 }
