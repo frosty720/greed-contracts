@@ -42,17 +42,17 @@ describe('GREED payment route on Base', () => {
 	describe('payRoutes', () => {
 		const ends = { greed: '0x00000000000000000000000000000000000000a1', greedPool: '0x00000000000000000000000000000000000000a2', treasury: '0x00000000000000000000000000000000000000a3', costs: '0x00000000000000000000000000000000000000a4' };
 
-		it('ETH goes WETH to USDC to GOOGLc, and USDC goes straight to GOOGLc: nobody pays in the stock', () => {
+		it('ETH goes WETH to USDC to GMEc, and USDC goes straight to GMEc: nobody pays in the stock', () => {
 			const { buyer, tokenPay } = payRoutes(ends);
-			expect(buyer).to.include({ payToken: BASE.weth, firstPool: BASE_ROUTE.wethUsdcPool, secondPool: BASE_ROUTE.googlUsdcPool });
-			expect(tokenPay).to.include({ payToken: BASE.usdc, firstPool: BASE_ROUTE.googlUsdcPool, secondPool: ethers.ZeroAddress });
+			expect(buyer).to.include({ payToken: BASE.weth, firstPool: BASE_ROUTE.wethUsdcPool, secondPool: BASE_ROUTE.gmeUsdcPool });
+			expect(tokenPay).to.include({ payToken: BASE.usdc, firstPool: BASE_ROUTE.gmeUsdcPool, secondPool: ethers.ZeroAddress });
 		});
 
 		it('both end on the stock, GREED and its pool, pay the same treasury and costs, and carry the 10% and 50% split', () => {
 			const { buyer, tokenPay } = payRoutes(ends);
 			for (const route of [buyer, tokenPay]) {
 				// Addresses come back checksummed, whatever case they were given in.
-				expect(route).to.include({ stock: BASE_ROUTE.googl, stockPool: ethers.getAddress(ends.greedPool.toLowerCase()), greed: ethers.getAddress(ends.greed.toLowerCase()), treasury: ethers.getAddress(ends.treasury.toLowerCase()), costs: ethers.getAddress(ends.costs.toLowerCase()) });
+				expect(route).to.include({ stock: BASE_ROUTE.gme, stockPool: ethers.getAddress(ends.greedPool.toLowerCase()), greed: ethers.getAddress(ends.greed.toLowerCase()), treasury: ethers.getAddress(ends.treasury.toLowerCase()), costs: ethers.getAddress(ends.costs.toLowerCase()) });
 				expect(route).to.include(SPLIT);
 			}
 		});

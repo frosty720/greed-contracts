@@ -4,7 +4,7 @@ import { BASE_ROUTE, deployPayContracts, payRoutes, requireBought, requireGreedP
 import { deploymentExists, deploymentFile, loadDeployment, saveDeployment } from './lib/sepolia';
 
 /**
- * Deploys GreedBuyer and TokenPay on Base, on GREED's route through GOOGLc. Run it after GREED has launched: it needs
+ * Deploys GreedBuyer and TokenPay on Base, on GREED's route through GMEc. Run it after GREED has launched: it needs
  * GREED_ADDRESS and GREED_POOL, with BASE_TREASURY_SAFE and BASE_COSTS_ADDRESS. Without DEPLOY=1 it only runs the checks,
  * including a simulation of both contracts on live state, and says what it would do. Neither contract can be changed
  * once deployed.

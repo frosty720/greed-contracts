@@ -1,0 +1,21 @@
+{
+	"chainId": 8453,
+	"greed": "0xcbbaf485817b174a01e29b012e6e85435765d0a7",
+	"buyer": "0x4190431F7ff95CB5AC8d2Ce4e3F5fdcECCbB848A",
+	"tokenPay": {
+		"usdc": "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913",
+		"tokenPay": "0xCd820032D86dDc88951Ef164e5f8130F1371fAfC"
+	},
+	"route": {
+		"stock": "0xb2000000000000000000007790ed6E48e06eD935",
+		"wethUsdcPool": "0x2A430bEbD2082d8e05D56d64DEDE8944279bbC24",
+		"usdcStockPool": "0xbBe3491582DD226bB35C6bC14AfB825941390f45",
+		"stockGreedPool": "0x6E9D3D023333F713671aDEF499Aa3c9f7c0B227d"
+	},
+	"costs": "0xaE51f2EfE70e57b994BE8F7f97C4dC824c51802a",
+	"payBlock": 58334332,
+	"block": 58337122,
+	"treasury": "0x47b7702a4789912d0dfFDadC07c50395c293fF0A",
+	"prizePool": "0x96FAB57459251f0621d5d5e934c4902E1dB077F8",
+	"claimWindow": 2419200
+}

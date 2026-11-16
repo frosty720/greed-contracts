@@ -47,6 +47,10 @@ const config: HardhatUserConfig = {
 		},
 		...(baseUrl ? { base: { url: baseUrl, chainId: 8453, accounts: baseDeployer ? [baseDeployer] : [], httpHeaders: headersFor(baseUrl) } } : {}),
 	},
+	// One Etherscan V2 key verifies on every Etherscan-family explorer, BaseScan included. Sourcify stays off: this plugin
+	// version calls Sourcify's API v1, which Sourcify has removed (404, 2026-11-16).
+	etherscan: { apiKey: process.env.ETHERSCAN_API_KEY ?? '' },
+	sourcify: { enabled: false },
 };
 
 export default config;

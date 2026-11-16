@@ -4,16 +4,16 @@ import { BASE, withoutUrls } from './mainnet';
 import { SPLIT } from './token-pay';
 
 /**
- * GREED's payment route on Base: every address read on-chain on 2026-11-11 (owner's pair, 2026-11-10: GREED/GOOGL).
- * GOOGLc is a B20 token, which the Base node runs natively: a local fork cannot execute it, so the route is checked by
+ * GREED's payment route on Base: every address read on-chain on 2026-11-16 (GREED launched paired with GMEc, 2026-11-16).
+ * GMEc is a B20 token, which the Base node runs natively: a local fork cannot execute it, so the route is checked by
  * simulating on the live chain (`simulateRoute`), never on a fork.
  */
 export const BASE_ROUTE = {
-	/** Alphabet's tokenized share on Base, 8 decimals. */
-	googl: '0xb2000000000000000000002D0BA3164cc74f58B7',
-	/** Aerodrome USDC/GOOGLc, tick spacing 10: the deepest GOOGLc pool. */
-	googlUsdcPool: '0x16c70F04C3080a127486Cdf5a4C33c066bBF47C3',
-	/** Aerodrome WETH/USDC, tick spacing 100. ETH goes through USDC: the direct WETH/GOOGLc pool is thin. */
+	/** GameStop's tokenized share on Base, 8 decimals. */
+	gme: '0xb2000000000000000000007790ed6E48e06eD935',
+	/** Stonks Exchange USDC/GMEc, tick spacing 1, fee 0.01%: the deepest GMEc pool against USDC (about $537 on 2026-11-16). */
+	gmeUsdcPool: '0xbBe3491582DD226bB35C6bC14AfB825941390f45',
+	/** Aerodrome WETH/USDC, tick spacing 100. ETH goes through USDC: GMEc has no WETH pool worth using. */
 	wethUsdcPool: '0x2A430bEbD2082d8e05D56d64DEDE8944279bbC24',
 	/** The factory Stonks Exchange's launcher opens its coins' pools on. */
 	stonksFactory: '0xf8f2eB4940CFE7d13603DDDD87f123820Fc061Ef',
@@ -57,7 +57,7 @@ export interface RouteLegs {
 	stockUsdcPool: string;
 }
 
-const BASE_LEGS: RouteLegs = { weth: BASE.weth, usdc: BASE.usdc, stock: BASE_ROUTE.googl, wethUsdcPool: BASE_ROUTE.wethUsdcPool, stockUsdcPool: BASE_ROUTE.googlUsdcPool };
+const BASE_LEGS: RouteLegs = { weth: BASE.weth, usdc: BASE.usdc, stock: BASE_ROUTE.gme, wethUsdcPool: BASE_ROUTE.wethUsdcPool, stockUsdcPool: BASE_ROUTE.gmeUsdcPool };
 
 /** Both contracts' routes for GREED paired with the stock. Players pay in ETH or USDC and never hold the stock. */
 export function payRoutes(ends: RouteEnds, legs: RouteLegs = BASE_LEGS): PayRoutes {
@@ -78,7 +78,7 @@ const FACTORY_ABI = ['function getPool(address, address, int24) view returns (ad
  * pool would be permanent: neither contract's route can change. The factory itself must list the pool: a look-alike can
  * claim any factory, so the pool's own word is not enough.
  */
-export async function requireGreedPool(provider: Provider, pool: string, greed: string, stock: string = BASE_ROUTE.googl, factory: string = BASE_ROUTE.stonksFactory): Promise<{ liquidity: bigint }> {
+export async function requireGreedPool(provider: Provider, pool: string, greed: string, stock: string = BASE_ROUTE.gme, factory: string = BASE_ROUTE.stonksFactory): Promise<{ liquidity: bigint }> {
 	if (!isAddress(pool) || !isAddress(greed)) throw new Error('GREED_ADDRESS and GREED_POOL must be addresses');
 	if ((await provider.getCode(pool)) === '0x') throw new Error(`${pool} has no contract on this chain, so it can't be GREED's pool`);
 	const contract = new Contract(pool, POOL_ABI, provider);
